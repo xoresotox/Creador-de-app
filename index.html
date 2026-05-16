@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planificador Nutricional Óptimo · Programación Lineal</title>
+<style>
+/* =========================================================
+   ESTILOS — diseño limpio, mobile-first, sin dependencias
+   ========================================================= */
+:root{
+  --bg:#0f1226; --panel:#161a36; --panel2:#1c2148; --ink:#e7e9ff;
+  --muted:#9aa1c7; --accent:#6cf0c2; --accent2:#7aa2ff; --warn:#ffd166;
+  --bad:#ff6b6b; --ok:#5dd39e; --line:#262b56;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.45}
+header{padding:24px 16px;background:linear-gradient(135deg,#1a2052,#0f1226);
+  border-bottom:1px solid var(--line)}
+header h1{margin:0 0 4px;font-size:1.5rem}
+header p{margin:0;color:var(--muted);font-size:.95rem}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:16px}
+section h2{margin-top:0;font-size:1.1rem;color:var(--accent)}
+section h3{font-size:1rem;color:var(--accent2);margin-bottom:8px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+input,select,button,textarea{font:inherit;color:var(--ink);
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;width:100%}
+input[type="checkbox"]{width:auto;margin-right:6px;vertical-align:middle}
+button{cursor:pointer;background:var(--accent);color:#0a0d20;
+  border:none;font-weight:600;transition:transform .1s ease}
+button:hover{transform:translateY(-1px)}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.danger{background:var(--bad);color:#1a0010}
+.grid{display:grid;gap:10px}
+.grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.grid.cols-4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:680px){
+  .grid.cols-3,.grid.cols-4{grid-template-columns:repeat(2,1fr)}
+}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left}
+th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;
+   letter-spacing:.04em}
+td input{padding:4px 6px;font-size:.85rem}
+.scroll-x{overflow-x:auto}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;
+  background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a0d20;
+  padding:1px 6px;border-radius:4px;border:1px solid var(--line);font-size:.85rem}
+.muted{color:var(--muted)}
+.center{text-align:center}
+details{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  padding:8px 12px;margin-top:8px}
+details summary{cursor:pointer;font-weight:600;color:var(--accent2)}
+details[open]{padding-bottom:12px}
+
+/* Semáforo nutricional */
+.semaforo{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.sem-card{flex:1;min-width:140px;padding:10px;border-radius:10px;
+  background:var(--panel2);border-left:6px solid var(--muted)}
+.sem-card.ok{border-left-color:var(--ok)}
+.sem-card.warn{border-left-color:var(--warn)}
+.sem-card.bad{border-left-color:var(--bad)}
+.sem-card .v{font-size:1.2rem;font-weight:700}
+.sem-card .l{color:var(--muted);font-size:.78rem}
+
+/* Simplex tableau */
+.tableau{font-size:.78rem;font-family:ui-monospace,Menlo,Consolas,monospace}
+.tableau th,.tableau td{padding:4px 6px;text-align:right;white-space:nowrap}
+.tableau th:first-child,.tableau td:first-child{text-align:left;color:var(--accent2)}
+.tableau .pivCol{background:rgba(122,162,255,.15)}
+.tableau .pivRow{background:rgba(108,240,194,.10)}
+.tableau .piv{background:rgba(255,209,102,.30);font-weight:700;color:#1a1500}
+.tableau .zrow{border-top:2px solid var(--accent);font-weight:600}
+
+/* Resultado */
+#results{display:none}
+#results.show{display:block}
+.solution-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:680px){.solution-grid{grid-template-columns:1fr}}
+.big-num{font-size:1.6rem;font-weight:700;color:var(--accent)}
+
+/* Footer Solve button */
+.solve-bar{position:sticky;bottom:0;z-index:10;background:var(--bg);
+  padding:12px 0;display:flex;gap:10px}
+.solve-bar button{flex:1;padding:14px;font-size:1rem}
+
+.error{color:var(--bad);font-weight:600;padding:8px;background:rgba(255,107,107,.1);
+  border:1px solid var(--bad);border-radius:8px}
+.note{color:var(--muted);font-size:.85rem;margin-top:6px}
+
+/* Pie chart legend */
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  margin-top:8px;font-size:.85rem}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;
+  vertical-align:middle;margin-right:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Planificador Nutricional Óptimo</h1>
+  <p>Programación Lineal · Método Simplex (Big-M) implementado desde cero</p>
+</header>
+
+<main>
+
+<!-- =========================================================
+     1. DATOS DEL USUARIO Y CÁLCULO DE TMB
+     ========================================================= -->
+<section id="user-section">
+  <h2>1 · Datos del usuario</h2>
+  <p class="muted">El requerimiento calórico se calcula con la ecuación
+    <strong>Mifflin-St Jeor</strong> y se ajusta según actividad y objetivo.</p>
+  <div class="grid cols-3">
+    <div>
+      <label>Peso (kg)</label>
+      <input type="number" id="peso" value="70" step="0.1" min="30" max="250">
+    </div>
+    <div>
+      <label>Altura (cm)</label>
+      <input type="number" id="altura" value="170" step="1" min="120" max="230">
+    </div>
+    <div>
+      <label>Edad (años)</label>
+      <input type="number" id="edad" value="30" step="1" min="14" max="100">
+    </div>
+    <div>
+      <label>Sexo</label>
+      <select id="sexo">
+        <option value="M">Masculino</option>
+        <option value="F">Femenino</option>
+      </select>
+    </div>
+    <div>
+      <label>Actividad física</label>
+      <select id="actividad">
+        <option value="1.2">Sedentario (1.2)</option>
+        <option value="1.375" selected>Ligero (1.375)</option>
+        <option value="1.55">Moderado (1.55)</option>
+        <option value="1.725">Activo (1.725)</option>
+        <option value="1.9">Muy activo (1.9)</option>
+      </select>
+    </div>
+    <div>
+      <label>Objetivo</label>
+      <select id="objetivo">
+        <option value="-300">Bajar peso (déficit -300 kcal)</option>
+        <option value="0" selected>Mantener peso</option>
+        <option value="300">Subir peso (superávit +300 kcal)</option>
+      </select>
+    </div>
+  </div>
+  <div class="note" id="tmbInfo"></div>
+</section>
+
+<!-- =========================================================
+     2. RESTRICCIONES OPCIONALES
+     ========================================================= -->
+<section id="restrictions-section">
+  <h2>2 · Restricciones del modelo</h2>
+  <h3>Función objetivo</h3>
+  <div class="grid cols-2">
+    <label><input type="radio" name="objfn" value="min" checked>
+      Minimizar costo (S/.)</label>
+    <label><input type="radio" name="objfn" value="max">
+      Maximizar puntaje nutricional</label>
+  </div>
+
+  <h3 style="margin-top:14px">Obligatorias (siempre activas)</h3>
+  <ul class="muted" style="font-size:.88rem;margin:4px 0 10px 18px">
+    <li>Calorías totales = TMB ± 5%</li>
+    <li>Proteínas ≥ peso × 0.8 g/día (OMS)</li>
+    <li>Grasas ≤ 35% de calorías totales / 9</li>
+    <li>Carbohidratos ≥ 45% de calorías totales / 4</li>
+    <li>x<sub>i</sub> ≥ 0 (no negatividad)</li>
+  </ul>
+
+  <h3>Opcionales</h3>
+  <div class="grid cols-2">
+    <div>
+      <label><input type="checkbox" id="useBudget"> Presupuesto diario máx (S/.)</label>
+      <input type="number" id="budget" value="15" step="0.5" min="1">
+    </div>
+    <div>
+      <label><input type="checkbox" id="useVariety"> Mínimo de variedad (alimentos distintos)</label>
+      <input type="number" id="variety" value="6" step="1" min="2" max="20">
+    </div>
+  </div>
+  <div style="margin-top:10px">
+    <label>Excluir grupos alimentarios:</label>
+    <div id="groupExcludes" class="grid cols-3"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     3. BASE DE ALIMENTOS EDITABLE
+     ========================================================= -->
+<section id="foods-section">
+  <h2>3 · Base de datos de alimentos (editable)</h2>
+  <p class="muted">Datos por 100 g. El usuario puede agregar, editar o eliminar.
+    El precio está en soles peruanos por 100 g.</p>
+  <div class="scroll-x">
+    <table id="foodsTable">
+      <thead>
+        <tr>
+          <th>Usar</th><th>Nombre</th><th>Grupo</th>
+          <th>Cal</th><th>Prot</th><th>Gras</th><th>Carb</th>
+          <th>S/./100g</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="foodsBody"></tbody>
+    </table>
+  </div>
+  <details>
+    <summary>+ Agregar nuevo alimento</summary>
+    <div class="grid cols-4" style="margin-top:10px">
+      <div><label>Nombre</label><input id="newName" placeholder="Ej: Yuca"></div>
+      <div><label>Grupo</label><input id="newGroup" placeholder="Tubérculos"></div>
+      <div><label>Calorías</label><input type="number" id="newCal" step="0.1"></div>
+      <div><label>Proteínas</label><input type="number" id="newProt" step="0.1"></div>
+      <div><label>Grasas</label><input type="number" id="newGras" step="0.1"></div>
+      <div><label>Carbohidratos</label><input type="number" id="newCarb" step="0.1"></div>
+      <div><label>Costo S/.</label><input type="number" id="newCost" step="0.01"></div>
+      <div style="display:flex;align-items:end">
+        <button id="addFoodBtn">Agregar</button>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- =========================================================
+     4. BOTÓN PRINCIPAL DE RESOLUCIÓN
+     ========================================================= -->
+<div class="solve-bar">
+  <button id="solveBtn">▶ Generar plan óptimo</button>
+  <button class="ghost" id="resetBtn">Restablecer</button>
+</div>
+
+<!-- =========================================================
+     5. RESULTADOS
+     ========================================================= -->
+<section id="results">
+  <h2>4 · Plan nutricional óptimo</h2>
+  <div id="errorBox"></div>
+  <div class="solution-grid">
+    <div>
+      <h3>Alimentos seleccionados</h3>
+      <div class="scroll-x">
+        <table id="resultsTable">
+          <thead><tr><th>Alimento</th><th>Cantidad (g)</th>
+                     <th>Cal</th><th>S/.</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><th>Total</th><th id="totalGrams"></th>
+                     <th id="totalCal"></th><th id="totalCost"></th></tr></tfoot>
+        </table>
+      </div>
+      <div style="margin-top:10px">
+        <span class="muted">Valor objetivo óptimo:</span>
+        <div class="big-num" id="objVal">—</div>
+      </div>
+    </div>
+    <div>
+      <h3>Distribución de macronutrientes</h3>
+      <div id="pieWrap" class="center"></div>
+      <div class="legend" id="pieLegend"></div>
+
+      <h3 style="margin-top:16px">Semáforo nutricional</h3>
+      <div class="semaforo" id="semaforo"></div>
+    </div>
+  </div>
+
+  <details style="margin-top:14px">
+    <summary>Comparación: valor obtenido vs restricciones</summary>
+    <div class="scroll-x">
+      <table id="constraintCompare">
+        <thead><tr><th>Restricción</th><th>Tipo</th>
+                   <th>Valor obtenido</th><th>Límite</th><th>OK</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <details style="margin-top:8px">
+    <summary>Análisis de sensibilidad (ranging) sobre calorías</summary>
+    <div id="sensBody"></div>
+  </details>
+
+  <details style="margin-top:8px" id="simplexDetails">
+    <summary>Proceso Simplex paso a paso</summary>
+    <div id="simplexBody"></div>
+  </details>
+</section>
+
+</main>
+
+<script>
+/* =================================================================
+   PLANIFICADOR NUTRICIONAL — INVESTIGACIÓN DE OPERACIONES
+   =================================================================
+   Modelo de Programación Lineal:
+
+     Variables:    x_i = cantidad del alimento i (en porciones de 100 g)
+                   x_i ≥ 0 para todo i
+
+     Objetivo:     MIN  Σ costo_i · x_i           (plan más económico)
+              o    MAX  Σ puntaje_i · x_i         (plan más nutritivo)
+                   (la maximización se convierte en min(-c) internamente)
+
+     Restricciones obligatorias:
+       (R1)  Σ cal_i  · x_i  ≥  0.95 · TMB
+       (R2)  Σ cal_i  · x_i  ≤  1.05 · TMB        (juntas implementan = ±5%)
+       (R3)  Σ prot_i · x_i  ≥  0.8 · peso
+       (R4)  Σ gras_i · x_i  ≤  0.35 · TMB / 9
+       (R5)  Σ carb_i · x_i  ≥  0.45 · TMB / 4
+
+     Restricciones opcionales:
+       (R6)  Σ costo_i · x_i ≤ presupuesto
+       (R7)  x_i = 0  para alimentos de grupos excluidos
+       (R8)  Cota superior x_i ≤ 5 (máx 500 g por alimento) para evitar
+              soluciones degeneradas con un solo alimento.
+       (R9)  Heurística de variedad (post-proceso, ver más abajo).
+
+   Algoritmo: SIMPLEX BIG-M (desde cero, sin librerías).
+================================================================= */
+
+
+/* ---------- 1) BASE DE DATOS DE ALIMENTOS PERUANOS ----------
+   Datos aproximados por 100 g. Costos en S/. (soles peruanos).
+   Fuente referencial: tablas peruanas de composición de alimentos.
+*/
+const DEFAULT_FOODS = [
+  {nombre:"Quinua cocida",       grupo:"Cereales",     cal:120, prot:4.4, gras:1.9, carb:21.3, costo:1.20},
+  {nombre:"Arroz blanco cocido", grupo:"Cereales",     cal:130, prot:2.7, gras:0.3, carb:28.0, costo:0.40},
+  {nombre:"Avena en hojuelas",   grupo:"Cereales",     cal:389, prot:16.9,gras:6.9, carb:66.3, costo:0.80},
+  {nombre:"Pan integral",        grupo:"Cereales",     cal:247, prot:13.0,gras:3.5, carb:41.0, costo:1.50},
+  {nombre:"Papa cocida",         grupo:"Tubérculos",   cal:87,  prot:1.9, gras:0.1, carb:20.1, costo:0.30},
+  {nombre:"Camote cocido",       grupo:"Tubérculos",   cal:86,  prot:1.6, gras:0.1, carb:20.1, costo:0.40},
+  {nombre:"Yuca cocida",         grupo:"Tubérculos",   cal:160, prot:1.4, gras:0.3, carb:38.0, costo:0.50},
+  {nombre:"Lentejas cocidas",    grupo:"Legumbres",    cal:116, prot:9.0, gras:0.4, carb:20.1, costo:0.90},
+  {nombre:"Frijol canario coc.", grupo:"Legumbres",    cal:127, prot:8.7, gras:0.5, carb:22.8, costo:0.85},
+  {nombre:"Garbanzo cocido",     grupo:"Legumbres",    cal:164, prot:8.9, gras:2.6, carb:27.4, costo:1.00},
+  {nombre:"Pollo (pechuga)",     grupo:"Carnes",       cal:165, prot:31.0,gras:3.6, carb:0.0,  costo:1.80},
+  {nombre:"Carne de res magra",  grupo:"Carnes",       cal:217, prot:26.1,gras:11.8,carb:0.0,  costo:3.50},
+  {nombre:"Jurel fresco",        grupo:"Pescados",     cal:158, prot:20.1,gras:8.4, carb:0.0,  costo:1.20},
+  {nombre:"Caballa fresca",      grupo:"Pescados",     cal:189, prot:19.0,gras:11.9,carb:0.0,  costo:1.10},
+  {nombre:"Atún en lata (agua)", grupo:"Pescados",     cal:116, prot:25.5,gras:1.0, carb:0.0,  costo:3.00},
+  {nombre:"Huevo de gallina",    grupo:"Huevos",       cal:155, prot:13.0,gras:11.0,carb:1.1,  costo:0.50},
+  {nombre:"Leche evaporada",     grupo:"Lácteos",      cal:135, prot:6.8, gras:7.6, carb:10.0, costo:1.40},
+  {nombre:"Yogurt natural",      grupo:"Lácteos",      cal:61,  prot:3.5, gras:3.3, carb:4.7,  costo:1.20},
+  {nombre:"Queso fresco",        grupo:"Lácteos",      cal:264, prot:18.0,gras:21.0,carb:1.3,  costo:2.50},
+  {nombre:"Plátano de seda",     grupo:"Frutas",       cal:89,  prot:1.1, gras:0.3, carb:22.8, costo:0.30},
+  {nombre:"Manzana",             grupo:"Frutas",       cal:52,  prot:0.3, gras:0.2, carb:13.8, costo:0.60},
+  {nombre:"Naranja",             grupo:"Frutas",       cal:47,  prot:0.9, gras:0.1, carb:11.7, costo:0.40},
+  {nombre:"Palta",               grupo:"Frutas",       cal:160, prot:2.0, gras:14.7,carb:8.5,  costo:1.00},
+  {nombre:"Tomate",              grupo:"Verduras",     cal:18,  prot:0.9, gras:0.2, carb:3.9,  costo:0.40},
+  {nombre:"Cebolla",             grupo:"Verduras",     cal:40,  prot:1.1, gras:0.1, carb:9.3,  costo:0.30},
+  {nombre:"Brócoli",             grupo:"Verduras",     cal:34,  prot:2.8, gras:0.4, carb:6.6,  costo:0.80},
+  {nombre:"Zanahoria",           grupo:"Verduras",     cal:41,  prot:0.9, gras:0.2, carb:9.6,  costo:0.30},
+  {nombre:"Espinaca",            grupo:"Verduras",     cal:23,  prot:2.9, gras:0.4, carb:3.6,  costo:0.70},
+  {nombre:"Aceite vegetal",      grupo:"Grasas",       cal:884, prot:0.0, gras:100.0,carb:0.0, costo:0.80},
+  {nombre:"Maní tostado",        grupo:"Frutos secos", cal:567, prot:25.8,gras:49.2,carb:16.1, costo:2.20},
+  {nombre:"Almendras",           grupo:"Frutos secos", cal:579, prot:21.2,gras:49.9,carb:21.6, costo:6.00},
+];
+
+let FOODS = JSON.parse(JSON.stringify(DEFAULT_FOODS));   // base mutable
+let FOOD_ENABLED = FOODS.map(_ => true);                 // checkbox por alimento
+
+/* puntaje_nutricional simple: favorece proteína, penaliza grasa,
+   admite carbohidratos con peso moderado.
+   (Usado en la función objetivo "maximizar nutrición") */
+function nutritionalScore(f){
+  return 1.0*f.prot + 0.4*f.carb - 0.25*f.gras;
+}
+
+/* ---------- 2) CÁLCULO DE TMB Y REQUERIMIENTO CALÓRICO ----------
+   Mifflin-St Jeor (1990, revisión moderna de Harris-Benedict). */
+function computeTMB(peso, altura, edad, sexo, factor, ajuste){
+  const base = 10*peso + 6.25*altura - 5*edad + (sexo==="M" ? 5 : -161);
+  const tdee = base * factor;          // gasto energético diario total
+  return Math.round(tdee + ajuste);    // ajuste = -300, 0, +300
+}
+
+/* ===================================================================
+   3) IMPLEMENTACIÓN DEL MÉTODO SIMPLEX (BIG-M) DESDE CERO
+   ===================================================================
+   Convención:
+     · Forma estándar:  min c·x  s.a.  Ax = b,  x ≥ 0
+     · Big-M: para ≥ se añade variable de superávit (-1) y artificial (+M)
+              para =  se añade artificial (+M)
+              para ≤ se añade variable de holgura (+1)
+     · Maximización se convierte en min(-c).
+     · Iteración: variable entrante = mín. costo reducido (más negativo).
+                  variable saliente = mín. razón positiva b_i / a_ij.
+================================================================= */
+function simplexBigM(c_in, A_in, b_in, types_in, opts){
+  opts = opts || {};
+  const M = opts.M || 1e6;
+  const eps = opts.eps || 1e-9;
+  const maxIter = opts.maxIter || 500;
+  const recordIter = opts.recordIter !== false;
+
+  const n = c_in.length;
+  let m = A_in.length;
+
+  // Copia segura y normalización: b_i ≥ 0 (si negativo, multiplicar fila por -1
+  // y voltear el sentido de la desigualdad).
+  let A = A_in.map(r => r.slice());
+  let b = b_in.slice();
+  let types = types_in.slice();
+  for (let i = 0; i < m; i++){
+    if (b[i] < 0){
+      A[i] = A[i].map(v => -v);
+      b[i] = -b[i];
+      if (types[i] === '<=') types[i] = '>=';
+      else if (types[i] === '>=') types[i] = '<=';
+    }
+  }
+
+  // Construcción de columnas extra (holguras / superávit / artificiales).
+  // vars[] guarda la metadata de cada columna; basis[] el índice de var básica
+  // de cada fila.
+  const vars = [];
+  for (let j = 0; j < n; j++)
+    vars.push({name:`x${j+1}`, kind:'x', cost:c_in[j]});
+
+  // Matriz extendida E: empezamos copiando A y luego anexamos columnas.
+  const E = A.map(r => r.slice());
+  const basis = new Array(m).fill(-1);
+
+  function addCol(coefRow, kind, cost){
+    const colIdx = vars.length;
+    vars.push({name:`${kind}${colIdx}`, kind:kind, cost:cost});
+    for (let i = 0; i < m; i++) E[i].push(i === coefRow ? (kind==='e' ? -1 : 1) : 0);
+    return colIdx;
+  }
+
+  for (let i = 0; i < m; i++){
+    if (types[i] === '<='){
+      basis[i] = addCol(i, 's', 0);                    // holgura
+    } else if (types[i] === '>='){
+      addCol(i, 'e', 0);                                // superávit
+      basis[i] = addCol(i, 'a', M);                     // artificial
+    } else { // '='
+      basis[i] = addCol(i, 'a', M);                     // artificial
+    }
+  }
+  const totalCols = vars.length;
+
+  // Vector de costos extendido
+  const C = vars.map(v => v.cost);
+
+  // Fila Z (costos reducidos): zRow[j] = c_j - c_B · A_j (forma estándar)
+  // Iniciamos con C y luego restamos M·(filas de artificiales) para que las
+  // columnas de artificiales tengan costo reducido 0 (están en la base).
+  const zRow = C.slice();
+  for (let i = 0; i < m; i++){
+    if (vars[basis[i]].kind === 'a'){
+      for (let j = 0; j < totalCols; j++) zRow[j] -= M * E[i][j];
+    }
+  }
+  // Valor actual de la función objetivo: c_B · b
+  let zVal = 0;
+  for (let i = 0; i < m; i++) zVal += C[basis[i]] * b[i];
+  // -- inicialmente zVal = M·Σb_artificial; lo guardamos con signo para mostrar.
+
+  // Snapshots para el "paso a paso"
+  const iters = [];
+  function snapshot(label, pivRow, pivCol){
+    if (!recordIter) return;
+    iters.push({
+      label,
+      pivRow, pivCol,
+      basis: basis.slice(),
+      vars: vars.map(v => v.name),
+      kinds: vars.map(v => v.kind),
+      tab: E.map(r => r.slice()),
+      b: b.slice(),
+      zRow: zRow.slice(),
+      zVal: zVal
+    });
+  }
+  snapshot('Tabla inicial', -1, -1);
+
+  // Iteraciones
+  let status = 'optimal';
+  for (let it = 0; it < maxIter; it++){
+    // Variable entrante: costo reducido más negativo (minimización)
+    let pivCol = -1, minRC = -eps;
+    for (let j = 0; j < totalCols; j++){
+      if (zRow[j] < minRC){ minRC = zRow[j]; pivCol = j; }
+    }
+    if (pivCol === -1){ status = 'optimal'; break; }
+
+    // Variable saliente: razón mínima positiva
+    let pivRow = -1, minRatio = Infinity;
+    for (let i = 0; i < m; i++){
+      if (E[i][pivCol] > eps){
+        const r = b[i] / E[i][pivCol];
+        if (r < minRatio - eps){ minRatio = r; pivRow = i; }
+      }
+    }
+    if (pivRow === -1){ status = 'unbounded'; break; }
+
+    // Pivoteo: normalizar fila pivote y eliminar el pivote de las demás filas
+    const pivVal = E[pivRow][pivCol];
+    for (let j = 0; j < totalCols; j++) E[pivRow][j] /= pivVal;
+    b[pivRow] /= pivVal;
+    for (let i = 0; i < m; i++){
+      if (i !== pivRow && Math.abs(E[i][pivCol]) > eps){
+        const f = E[i][pivCol];
+        for (let j = 0; j < totalCols; j++) E[i][j] -= f * E[pivRow][j];
+        b[i] -= f * b[pivRow];
+      }
+    }
+    // Actualizar fila Z también (eliminación gauss-jordan)
+    const fz = zRow[pivCol];
+    if (Math.abs(fz) > eps){
+      for (let j = 0; j < totalCols; j++) zRow[j] -= fz * E[pivRow][j];
+      zVal -= fz * b[pivRow];
+    }
+    const out = basis[pivRow];
+    basis[pivRow] = pivCol;
+    snapshot(`Iteración ${it+1}: entra ${vars[pivCol].name}, sale ${vars[out].name}`,
+              pivRow, pivCol);
+  }
+
+  // Verificación de factibilidad: si alguna artificial sigue en la base
+  // con valor > 0, el problema original es infactible.
+  if (status === 'optimal'){
+    for (let i = 0; i < m; i++){
+      if (vars[basis[i]].kind === 'a' && b[i] > 1e-6){
+        status = 'infeasible';
+        break;
+      }
+    }
+  }
+
+  // Construir vector solución original (sólo las variables de decisión x_j)
+  const x = new Array(n).fill(0);
+  if (status === 'optimal'){
+    for (let i = 0; i < m; i++){
+      if (basis[i] < n) x[basis[i]] = b[i];
+    }
+  }
+  let z = 0;
+  for (let j = 0; j < n; j++) z += c_in[j] * x[j];
+
+  return { status, x, z, iters, vars, basis, finalTab: E, finalB: b, zRow };
+}
+
+/* ===================================================================
+   4) CONSTRUCCIÓN DEL MODELO DE PROGRAMACIÓN LINEAL
+   =================================================================== */
+function buildModel(userData, opts, foodList){
+  // foodList: subconjunto activo (no excluido por grupo, no deshabilitado)
+  const n = foodList.length;
+  const TMB = userData.tmb;
+  const peso = userData.peso;
+
+  // Coeficientes de la función objetivo
+  // Minimización siempre. Para "max nutrición" usamos -puntaje.
+  const c = foodList.map(f => opts.objMode === 'min'
+                                ? f.costo
+                                : -nutritionalScore(f));
+
+  const A = [];      // filas de coeficientes
+  const b = [];      // RHS
+  const types = [];  // '<=' '>=' '='
+  const labels = []; // descripción humana de cada restricción
+
+  // (R1) calorías ≥ 0.95·TMB
+  A.push(foodList.map(f => f.cal));        b.push(0.95*TMB); types.push('>=');
+  labels.push(`Calorías ≥ ${(0.95*TMB).toFixed(0)} kcal`);
+
+  // (R2) calorías ≤ 1.05·TMB
+  A.push(foodList.map(f => f.cal));        b.push(1.05*TMB); types.push('<=');
+  labels.push(`Calorías ≤ ${(1.05*TMB).toFixed(0)} kcal`);
+
+  // (R3) proteína ≥ 0.8 · peso
+  A.push(foodList.map(f => f.prot));       b.push(0.8*peso); types.push('>=');
+  labels.push(`Proteína ≥ ${(0.8*peso).toFixed(1)} g`);
+
+  // (R4) grasa ≤ 0.35·TMB/9
+  A.push(foodList.map(f => f.gras));       b.push(0.35*TMB/9); types.push('<=');
+  labels.push(`Grasa ≤ ${(0.35*TMB/9).toFixed(1)} g`);
+
+  // (R5) carbohidrato ≥ 0.45·TMB/4
+  A.push(foodList.map(f => f.carb));       b.push(0.45*TMB/4); types.push('>=');
+  labels.push(`Carbohidratos ≥ ${(0.45*TMB/4).toFixed(1)} g`);
+
+  // (R6) presupuesto opcional
+  if (opts.useBudget){
+    A.push(foodList.map(f => f.costo));    b.push(opts.budget); types.push('<=');
+    labels.push(`Costo ≤ S/. ${opts.budget.toFixed(2)}`);
+  }
+
+  // (R8) cota superior por alimento: x_i ≤ 5 (≤ 500 g) — evita planes
+  // dominados por un único alimento.
+  const MAX_PORTIONS = 5;
+  for (let j = 0; j < n; j++){
+    const row = new Array(n).fill(0); row[j] = 1;
+    A.push(row); b.push(MAX_PORTIONS); types.push('<=');
+    labels.push(`x_${j+1} ≤ ${MAX_PORTIONS} (máx ${MAX_PORTIONS*100}g de ${foodList[j].nombre})`);
+  }
+
+  // Variedad mínima (R9): si está activada, agregamos cota inferior x_i ≥ 0.3
+  // (= 30 g) para los N alimentos más equilibrados (uno por grupo cuando se
+  // pueda) según ratio puntaje/costo. Mantiene la naturaleza LP del problema.
+  if (opts.useVariety && opts.variety > 1){
+    const want = Math.min(opts.variety, n);
+    // Selección: ordenar por puntaje/costo desc, priorizando diversidad de grupo
+    const order = foodList
+      .map((f, j) => ({j, score: nutritionalScore(f) / Math.max(0.1, f.costo), grupo:f.grupo}))
+      .sort((a,b)=>b.score - a.score);
+    const chosen = []; const seenGroups = new Set();
+    // 1ª pasada: distintos grupos
+    for (const o of order){
+      if (chosen.length >= want) break;
+      if (!seenGroups.has(o.grupo)){
+        chosen.push(o.j); seenGroups.add(o.grupo);
+      }
+    }
+    // 2ª pasada: rellenar
+    for (const o of order){
+      if (chosen.length >= want) break;
+      if (!chosen.includes(o.j)) chosen.push(o.j);
+    }
+    for (const j of chosen){
+      const row = new Array(n).fill(0); row[j] = 1;
+      A.push(row); b.push(0.3); types.push('>=');     // ≥ 30 g
+      labels.push(`Variedad: x_${j+1} ≥ 0.3 (≥30 g de ${foodList[j].nombre})`);
+    }
+  }
+
+  return { c, A, b, types, labels, foodList };
+}
+
+/* ===================================================================
+   5) ANÁLISIS DE SENSIBILIDAD (RANGING) PARA LA RESTRICCIÓN CALÓRICA
+   ===================================================================
+   Estrategia: re-resolvemos el LP perturbando la cota inferior calórica
+   (R1) y reportamos el rango Δ donde la solución óptima permanece igual
+   en composición (mismo conjunto de alimentos seleccionados) o el costo
+   óptimo no cambia más de ε. Es un ranging numérico simplificado.
+*/
+function sensitivityCalories(userData, opts, foodList, baseSolution){
+  const TMB = userData.tmb;
+  const baseCal = TMB * 0.95;
+  const baseSet = baseSolution.x
+    .map((v,i)=>v>0.01 ? i : -1).filter(i=>i>=0).sort().join(',');
+  const baseZ = baseSolution.z;
+
+  // Probamos perturbaciones de RHS calórico desde -200 a +200 kcal.
+  const perturb = [-200,-150,-100,-50,-25,0,25,50,100,150,200];
+  const rows = [];
+  for (const d of perturb){
+    const u = Object.assign({}, userData, { tmb: TMB });
+    const optsP = Object.assign({}, opts);
+    // Re-construimos modelo cambiando sólo R1: calorías ≥ 0.95·TMB + d
+    const m = buildModel(u, optsP, foodList);
+    m.b[0] = baseCal + d;       // mover sólo R1
+    const sol = simplexBigM(m.c, m.A, m.b, m.types, {recordIter:false, maxIter:300});
+    if (sol.status !== 'optimal'){
+      rows.push({d, status:sol.status, z:NaN, sameBasis:false});
+      continue;
+    }
+    const setStr = sol.x.map((v,i)=>v>0.01?i:-1).filter(i=>i>=0).sort().join(',');
+    rows.push({d, status:'optimal', z:sol.z, sameBasis: setStr===baseSet});
+  }
+  // Calcular el rango contiguo donde sameBasis=true alrededor de d=0
+  let lo = 0, hi = 0;
+  const idx0 = rows.findIndex(r=>r.d===0);
+  if (idx0 >= 0 && rows[idx0].sameBasis){
+    for (let i = idx0; i >= 0 && rows[i].sameBasis; i--) lo = rows[i].d;
+    for (let i = idx0; i < rows.length && rows[i].sameBasis; i++) hi = rows[i].d;
+  }
+  return { rows, lo, hi, baseZ };
+}
+
+/* ===================================================================
+   6) RENDERIZADO DE UI
+   =================================================================== */
+function fmt(n, dec=2){
+  if (!isFinite(n)) return '—';
+  return Number(n).toLocaleString('es-PE',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
+
+/* --- Tabla de alimentos editable --- */
+function renderFoodsTable(){
+  const tbody = document.getElementById('foodsBody');
+  tbody.innerHTML = '';
+  FOODS.forEach((f, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" ${FOOD_ENABLED[i]?'checked':''} data-r="${i}" data-k="enabled"></td>
+      <td><input value="${f.nombre}" data-r="${i}" data-k="nombre"></td>
+      <td><input value="${f.grupo}" data-r="${i}" data-k="grupo"></td>
+      <td><input type="number" step="0.1" value="${f.cal}" data-r="${i}" data-k="cal"></td>
+      <td><input type="number" step="0.1" value="${f.prot}" data-r="${i}" data-k="prot"></td>
+      <td><input type="number" step="0.1" value="${f.gras}" data-r="${i}" data-k="gras"></td>
+      <td><input type="number" step="0.1" value="${f.carb}" data-r="${i}" data-k="carb"></td>
+      <td><input type="number" step="0.01" value="${f.costo}" data-r="${i}" data-k="costo"></td>
+      <td><button class="danger" data-del="${i}">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.oninput = (e) => {
+    const t = e.target;
+    const r = +t.dataset.r, k = t.dataset.k;
+    if (k === 'enabled') FOOD_ENABLED[r] = t.checked;
+    else if (k === 'nombre' || k === 'grupo') FOODS[r][k] = t.value;
+    else FOODS[r][k] = parseFloat(t.value) || 0;
+    if (k === 'grupo') renderGroupExcludes();
+  };
+  tbody.onclick = (e) => {
+    if (e.target.dataset.del !== undefined){
+      const r = +e.target.dataset.del;
+      FOODS.splice(r,1);
+      FOOD_ENABLED.splice(r,1);
+      renderFoodsTable();
+      renderGroupExcludes();
+    }
+  };
+}
+
+/* --- Casillas para excluir grupos alimentarios --- */
+function renderGroupExcludes(){
+  const groups = [...new Set(FOODS.map(f=>f.grupo))].sort();
+  const wrap = document.getElementById('groupExcludes');
+  const previously = new Set(
+    [...wrap.querySelectorAll('input:checked')].map(i=>i.value));
+  wrap.innerHTML = '';
+  groups.forEach(g=>{
+    const id = 'g_'+g.replace(/\s+/g,'_');
+    const checked = previously.has(g) ? 'checked' : '';
+    wrap.insertAdjacentHTML('beforeend',
+      `<label><input type="checkbox" value="${g}" ${checked}> ${g}</label>`);
+  });
+}
+
+/* --- Recolectar datos del formulario --- */
+function readUserData(){
+  const peso = +document.getElementById('peso').value;
+  const altura = +document.getElementById('altura').value;
+  const edad = +document.getElementById('edad').value;
+  const sexo = document.getElementById('sexo').value;
+  const factor = +document.getElementById('actividad').value;
+  const ajuste = +document.getElementById('objetivo').value;
+  const tmb = computeTMB(peso, altura, edad, sexo, factor, ajuste);
+  return {peso, altura, edad, sexo, factor, ajuste, tmb};
+}
+function readOpts(){
+  return {
+    objMode: document.querySelector('input[name="objfn"]:checked').value,
+    useBudget: document.getElementById('useBudget').checked,
+    budget: +document.getElementById('budget').value,
+    useVariety: document.getElementById('useVariety').checked,
+    variety: +document.getElementById('variety').value,
+    excludedGroups: [...document.querySelectorAll('#groupExcludes input:checked')]
+                    .map(i=>i.value),
+  };
+}
+
+/* --- Mostrar TMB en vivo --- */
+function updateTMBInfo(){
+  const u = readUserData();
+  document.getElementById('tmbInfo').innerHTML =
+    `TMB calculada: <span class="kbd">${u.tmb} kcal/día</span> ` +
+    `<span class="muted">(rango aceptado: ${(u.tmb*0.95).toFixed(0)}–${(u.tmb*1.05).toFixed(0)} kcal)</span>`;
+}
+
+/* --- Gráfico de torta SVG (sin librerías) --- */
+function pieChart(parts){
+  // parts = [{label, value, color}]
+  const total = parts.reduce((s,p)=>s+p.value, 0) || 1;
+  const cx=110, cy=110, r=90;
+  let acc = 0;
+  let svg = `<svg viewBox="0 0 220 220" width="220" height="220"
+                 style="max-width:100%;height:auto">`;
+  parts.forEach(p=>{
+    const frac = p.value/total;
+    const a0 = acc * 2*Math.PI - Math.PI/2;
+    const a1 = (acc+frac) * 2*Math.PI - Math.PI/2;
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const large = frac > 0.5 ? 1 : 0;
+    if (frac >= 0.999){
+      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${p.color}"/>`;
+    } else if (frac > 0){
+      svg += `<path d="M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${large},1 ${x1},${y1} Z"
+              fill="${p.color}"/>`;
+    }
+    acc += frac;
+  });
+  svg += `<circle cx="${cx}" cy="${cy}" r="40" fill="#161a36"/>`;
+  svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle"
+            fill="#e7e9ff" font-size="14">${total.toFixed(0)} kcal</text>`;
+  svg += `<text x="${cx}" y="${cy+14}" text-anchor="middle"
+            fill="#9aa1c7" font-size="10">total</text>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+/* --- Renderizar tabla de Simplex iteración --- */
+function renderTableau(it){
+  const decisionN = it.vars.length;
+  const head = ['BV', ...it.vars, 'b'];
+  const cls = (j) => (j-1)===it.pivCol ? 'pivCol' : '';
+  let html = `<div class="scroll-x"><table class="tableau">`;
+  html += `<thead><tr>${head.map((h,j)=>`<th class="${j>0?cls(j):''}">${h}</th>`).join('')}</tr></thead><tbody>`;
+  for (let i=0;i<it.tab.length;i++){
+    const isPR = i===it.pivRow;
+    html += `<tr class="${isPR?'pivRow':''}"><td>${it.vars[it.basis[i]]}</td>`;
+    for (let j=0;j<it.tab[i].length;j++){
+      const isPiv = isPR && j===it.pivCol;
+      const klass = isPiv ? 'piv' : (j===it.pivCol ? 'pivCol' : '');
+      html += `<td class="${klass}">${fmt(it.tab[i][j],3)}</td>`;
+    }
+    html += `<td>${fmt(it.b[i],3)}</td></tr>`;
+  }
+  // Fila Z
+  html += `<tr class="zrow"><td>Z</td>`;
+  for (let j=0;j<it.zRow.length;j++){
+    const klass = j===it.pivCol ? 'pivCol' : '';
+    html += `<td class="${klass}">${fmt(it.zRow[j],3)}</td>`;
+  }
+  html += `<td>${fmt(it.zVal,3)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderSimplexSteps(sol){
+  const body = document.getElementById('simplexBody');
+  const total = sol.iters.length;
+  let html = `<p class="muted">Total de iteraciones: <strong>${total-1}</strong>.
+              Big-M = 10⁶. Columna entrante resaltada en azul, fila saliente
+              en verde, pivote en amarillo.</p>`;
+  if (total > 12){
+    html += `<p class="muted">Mostrando las primeras 6 y la última iteración
+             (la tabla completa puede ser muy grande).</p>`;
+  }
+  const indices = [];
+  if (total <= 12){
+    for (let i=0;i<total;i++) indices.push(i);
+  } else {
+    for (let i=0;i<6;i++) indices.push(i);
+    indices.push(total-1);
+  }
+  for (const idx of indices){
+    const it = sol.iters[idx];
+    html += `<details ${idx<2?'open':''}><summary>${it.label}</summary>${renderTableau(it)}</details>`;
+  }
+  if (sol.status === 'optimal'){
+    html += `<p style="margin-top:10px;color:var(--ok)">
+       ✓ Condición de optimalidad alcanzada: todos los costos reducidos ≥ 0
+       en la fila Z.</p>`;
+  } else {
+    html += `<p class="error">Estado: ${sol.status}</p>`;
+  }
+  body.innerHTML = html;
+}
+
+/* --- Comparar restricciones contra solución --- */
+function renderConstraintCompare(model, sol){
+  const tb = document.querySelector('#constraintCompare tbody');
+  tb.innerHTML = '';
+  // sólo mostramos las primeras restricciones (las nutricionales y presupuesto)
+  const N = Math.min(model.A.length, 6);
+  for (let i=0;i<N;i++){
+    const lhs = model.A[i].reduce((s,a,j)=>s+a*sol.x[j], 0);
+    const ok = (model.types[i]==='<=' && lhs <= model.b[i]+1e-3)
+            || (model.types[i]==='>=' && lhs >= model.b[i]-1e-3)
+            || (model.types[i]==='='  && Math.abs(lhs-model.b[i])<1e-3);
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${model.labels[i]}</td><td>${model.types[i]}</td>
+       <td>${fmt(lhs,2)}</td><td>${fmt(model.b[i],2)}</td>
+       <td style="color:${ok?'var(--ok)':'var(--bad)'}">${ok?'✓':'✗'}</td></tr>`);
+  }
+}
+
+/* --- Semáforo nutricional --- */
+function semCard(label, value, lo, hi, unit){
+  let cls = 'ok';
+  if (value < lo*0.95 || value > hi*1.05) cls = 'bad';
+  else if (value < lo || value > hi)      cls = 'warn';
+  const range = hi===Infinity ? `≥ ${fmt(lo,0)}` : `${fmt(lo,0)}–${fmt(hi,0)}`;
+  return `<div class="sem-card ${cls}">
+     <div class="l">${label}</div>
+     <div class="v">${fmt(value,1)} ${unit}</div>
+     <div class="l">objetivo: ${range} ${unit}</div></div>`;
+}
+
+/* --- Renderizado principal de resultados --- */
+function renderResults(model, sol, userData, opts){
+  const sec = document.getElementById('results');
+  const errBox = document.getElementById('errorBox');
+  errBox.innerHTML = '';
+  if (sol.status !== 'optimal'){
+    errBox.innerHTML = `<div class="error">No se pudo resolver: <strong>${sol.status}</strong>.
+       Posiblemente las restricciones son incompatibles. Pruebe relajando
+       el presupuesto, la variedad o los grupos excluidos.</div>`;
+    sec.classList.add('show');
+    renderSimplexSteps(sol);
+    return;
+  }
+  // Tabla de alimentos seleccionados
+  const tb = document.querySelector('#resultsTable tbody');
+  tb.innerHTML = '';
+  let totalCal=0, totalCost=0, totalProt=0, totalGras=0, totalCarb=0, totalGr=0;
+  for (let j=0;j<sol.x.length;j++){
+    const x = sol.x[j];
+    if (x < 0.01) continue;
+    const f = model.foodList[j];
+    const grams = x * 100;
+    const cal = x * f.cal;
+    const cost = x * f.costo;
+    totalCal += cal; totalCost += cost; totalGr += grams;
+    totalProt += x * f.prot; totalGras += x * f.gras; totalCarb += x * f.carb;
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${f.nombre} <span class="tag">${f.grupo}</span></td>
+       <td>${fmt(grams,0)}</td><td>${fmt(cal,0)}</td>
+       <td>${fmt(cost,2)}</td></tr>`);
+  }
+  document.getElementById('totalGrams').textContent = fmt(totalGr,0)+' g';
+  document.getElementById('totalCal').textContent = fmt(totalCal,0)+' kcal';
+  document.getElementById('totalCost').textContent = 'S/. '+fmt(totalCost,2);
+
+  // Valor objetivo
+  const objLabel = opts.objMode === 'min'
+    ? `Costo total: S/. ${fmt(totalCost,2)}`
+    : `Puntaje nutricional: ${fmt(-sol.z,1)}`;
+  document.getElementById('objVal').textContent = objLabel;
+
+  // Pie chart de macros (en kcal)
+  const pcal = totalProt*4, ccal = totalCarb*4, gcal = totalGras*9;
+  const pie = pieChart([
+    {label:'Proteína', value:pcal, color:'#7aa2ff'},
+    {label:'Carbohidratos', value:ccal, color:'#6cf0c2'},
+    {label:'Grasa', value:gcal, color:'#ffd166'},
+  ]);
+  document.getElementById('pieWrap').innerHTML = pie;
+  const tot = pcal+ccal+gcal;
+  document.getElementById('pieLegend').innerHTML = `
+    <span><span class="sw" style="background:#7aa2ff"></span>
+      Proteína ${fmt(totalProt,1)}g (${fmt(pcal/tot*100,0)}%)</span>
+    <span><span class="sw" style="background:#6cf0c2"></span>
+      Carbohidratos ${fmt(totalCarb,1)}g (${fmt(ccal/tot*100,0)}%)</span>
+    <span><span class="sw" style="background:#ffd166"></span>
+      Grasa ${fmt(totalGras,1)}g (${fmt(gcal/tot*100,0)}%)</span>`;
+
+  // Semáforo
+  const TMB = userData.tmb;
+  const sem = document.getElementById('semaforo');
+  sem.innerHTML = ''
+    + semCard('Calorías', totalCal, TMB*0.95, TMB*1.05, 'kcal')
+    + semCard('Proteína', totalProt, 0.8*userData.peso, 2.2*userData.peso, 'g')
+    + semCard('Grasa', totalGras, 0.20*TMB/9, 0.35*TMB/9, 'g')
+    + semCard('Carbohidratos', totalCarb, 0.45*TMB/4, 0.65*TMB/4, 'g')
+    + semCard('Costo', totalCost, 0, opts.useBudget?opts.budget:Infinity, 'S/.');
+
+  // Comparativa restricciones
+  renderConstraintCompare(model, sol);
+
+  // Sensibilidad
+  const sens = sensitivityCalories(userData, opts, model.foodList, sol);
+  let sh = `<p class="muted">Variamos la cota inferior calórica (R1)
+    ±200 kcal y observamos si el conjunto óptimo de alimentos cambia.</p>`;
+  sh += `<div class="scroll-x"><table><thead><tr>
+     <th>Δ kcal</th><th>RHS R1</th><th>Estado</th><th>Z*</th>
+     <th>Mismo plan</th></tr></thead><tbody>`;
+  sens.rows.forEach(r=>{
+    sh += `<tr><td>${r.d>0?'+':''}${r.d}</td>
+       <td>${fmt(0.95*TMB+r.d,0)}</td>
+       <td>${r.status}</td>
+       <td>${isFinite(r.z)?fmt(r.z,2):'—'}</td>
+       <td style="color:${r.sameBasis?'var(--ok)':'var(--bad)'}">${r.sameBasis?'sí':'no'}</td></tr>`;
+  });
+  sh += `</tbody></table></div>`;
+  sh += `<p>Rango contiguo donde la composición óptima no cambia:
+     <span class="kbd">[${sens.lo>=0?'+':''}${sens.lo}, ${sens.hi>=0?'+':''}${sens.hi}] kcal</span></p>`;
+  document.getElementById('sensBody').innerHTML = sh;
+
+  // Pasos Simplex
+  renderSimplexSteps(sol);
+
+  sec.classList.add('show');
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ===================================================================
+   7) HANDLER PRINCIPAL: RECOLECTAR → CONSTRUIR → RESOLVER → MOSTRAR
+   =================================================================== */
+function solve(){
+  try {
+    const userData = readUserData();
+    const opts = readOpts();
+
+    // Filtramos alimentos: deben estar habilitados Y no pertenecer a grupo excluido
+    const idxs = [];
+    const list = [];
+    FOODS.forEach((f, i) => {
+      if (!FOOD_ENABLED[i]) return;
+      if (opts.excludedGroups.includes(f.grupo)) return;
+      list.push(f); idxs.push(i);
+    });
+    if (list.length < 4){
+      document.getElementById('errorBox').innerHTML =
+        `<div class="error">Hay menos de 4 alimentos disponibles.
+         Active más alimentos o quite exclusiones de grupo.</div>`;
+      document.getElementById('results').classList.add('show');
+      return;
+    }
+
+    const model = buildModel(userData, opts, list);
+    const sol = simplexBigM(model.c, model.A, model.b, model.types, {maxIter: 500});
+    renderResults(model, sol, userData, opts);
+  } catch (e){
+    console.error(e);
+    document.getElementById('errorBox').innerHTML =
+      `<div class="error">Error: ${e.message}</div>`;
+    document.getElementById('results').classList.add('show');
+  }
+}
+
+/* ===================================================================
+   8) BOOTSTRAP DE LA INTERFAZ
+   =================================================================== */
+function init(){
+  renderFoodsTable();
+  renderGroupExcludes();
+  updateTMBInfo();
+
+  // Listeners de cambio en datos del usuario → actualizar TMB
+  ['peso','altura','edad','sexo','actividad','objetivo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateTMBInfo);
+    document.getElementById(id).addEventListener('change', updateTMBInfo);
+  });
+
+  // Agregar alimento
+  document.getElementById('addFoodBtn').addEventListener('click', ()=>{
+    const f = {
+      nombre: document.getElementById('newName').value || 'Nuevo',
+      grupo:  document.getElementById('newGroup').value || 'Otros',
+      cal:  +document.getElementById('newCal').value  || 0,
+      prot: +document.getElementById('newProt').value || 0,
+      gras: +document.getElementById('newGras').value || 0,
+      carb: +document.getElementById('newCarb').value || 0,
+      costo:+document.getElementById('newCost').value || 0,
+    };
+    FOODS.push(f); FOOD_ENABLED.push(true);
+    renderFoodsTable(); renderGroupExcludes();
+    ['newName','newGroup','newCal','newProt','newGras','newCarb','newCost']
+      .forEach(id=>document.getElementById(id).value='');
+  });
+
+  document.getElementById('solveBtn').addEventListener('click', solve);
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    FOODS = JSON.parse(JSON.stringify(DEFAULT_FOODS));
+    FOOD_ENABLED = FOODS.map(_=>true);
+    renderFoodsTable(); renderGroupExcludes();
+    document.getElementById('results').classList.remove('show');
+  });
+}
+init();
+</script>
+</body>
+</html>
